@@ -2,6 +2,7 @@
 
 const BodyParser = require('body-parser')
 const Express = require('express')
+const _passport = require('passport')
 const ExpressSession = require('express-session')
 const lusca = require('lusca')
 const passportStrategies = require('./src/passport-strategies')
@@ -16,6 +17,8 @@ module.exports = (nextApp, {
   pathPrefix = '/auth',
   // Express Server (optional).
   expressApp = null,
+  // Passport (optional),
+  passport = _passport,
   // Express Session (optional).
   expressSession = ExpressSession,
   // Secret used to encrypt session data on the server.
@@ -162,6 +165,7 @@ module.exports = (nextApp, {
     serverUrl: serverUrl,
     providers: providers,
     functions: functions,
+    passport: passport,
     additionalStrategies: additionalStrategies,
   })
 

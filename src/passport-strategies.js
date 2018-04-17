@@ -3,10 +3,9 @@
  */
 'use strict'
 
-const passport = require('passport')
-
 module.exports = ({
   expressApp = null, // Express Server
+  passport = null,
   pathPrefix = '/auth', // URL base path for authentication routes
   providers = [],
   serverUrl = null,
@@ -20,12 +19,16 @@ module.exports = ({
     update: (user, profile) => {},
     insert: (user, profile) => {},
     serialize: (user) => {},
-    deserialize: (id) => {}
+    deserialize: (id) => {},
   },
   additionalStrategies = [],
 } = {}) => {
   if (expressApp === null) {
     throw new Error('expressApp must be an instance of an express server')
+  }
+
+  if (passport === null) {
+    throw new Error('passport not defined')
   }
 
   if (typeof(functions) !== 'object') {
@@ -102,13 +105,13 @@ module.exports = ({
         .then(user => {
           if (req.user) {
             // This section handles scenarios when a user is already signed in.
-            
+
             if (user) {
-              // This section handles if the user is already logged in              
+              // This section handles if the user is already logged in
               if (req.user.id === user.id) {
-                // This section handles if the user is already logged in and is 
+                // This section handles if the user is already logged in and is
                 // already linked to local account they are signed in with.
-                // If they are, all we need to do is update the Refresh Token 
+                // If they are, all we need to do is update the Refresh Token
                 // value if we got one.
                 if (refreshToken) {
                   user[providerName.toLowerCase()] = {
@@ -128,36 +131,36 @@ module.exports = ({
                   return next(null, user)
                 }
               } else {
-                // This section handles if a user is logged in but the oAuth 
-                // account they are trying to link to is already linked to a 
+                // This section handles if a user is logged in but the oAuth
+                // account they are trying to link to is already linked to a
                 // different local account.
-                
-                // This prevents users from linking an oAuth account to more 
+
+                // This prevents users from linking an oAuth account to more
                 // than one local account at the same time.
                 return next(null, false)
               }
             } else {
               // This secion handles if a user is already logged in and is
               // trying to link a new account.
-               
+
               // Look up the current user.
 
-              // First get the User ID from the User, then look up the user 
-              // details. Note: We don't use the User object in req.user 
-              // directly as it is a simplified set of properties set by 
-              // functions.deserialize().    
+              // First get the User ID from the User, then look up the user
+              // details. Note: We don't use the User object in req.user
+              // directly as it is a simplified set of properties set by
+              // functions.deserialize().
               functions.serialize(req.user)
               .then(id => {
                 if (!id) throw new Error("Unable to serialize user")
                 return functions.find({ id: id })
               })
               .then(user => {
-                
-                // This error should not happen, unless the currently signed in 
+
+                // This error should not happen, unless the currently signed in
                 // user has been deleted deleted from the database since
                 // signing in (or there is a problem talking to the database).
                 if (!user) return next(new Error('Unable to look up account for current user'), false)
-              
+
                 // If we don't already have a name for the user, use value the
                 // name value specfied in their profile on the remote service.
                 user.name = user.name || profile.name
@@ -192,7 +195,7 @@ module.exports = ({
                 return next(err, false)
               })
             }
-        
+
           } else {
             // This section handles scenarios when a user is not logged in.
 
@@ -200,7 +203,7 @@ module.exports = ({
               // This section handles senarios where the user is not logged in
               // but they seem to have an account already, so we sign them in
               // as that user.
-              
+
               // Update Access and Refresh Tokens for the user if we got them.
               if (accessToken || refreshToken) {
                 if (accessToken) user[providerName.toLowerCase()].accessToken = accessToken
@@ -219,24 +222,24 @@ module.exports = ({
               // This section handles senarios where the user is not logged in
               // and they don't have a local account already.
 
-              // First we check to see if a local account with the same email 
+              // First we check to see if a local account with the same email
               // address as the one associated with their oAuth profile exists.
               //
-              // This is so they can't accidentally end up with two accounts 
+              // This is so they can't accidentally end up with two accounts
               // linked to the same email address.
               return functions.find({email: profile.email})
               .then(user => {
-                
-                // If we already have a local account associated with their 
-                // email address, the user should sign in with that account - 
+
+                // If we already have a local account associated with their
+                // email address, the user should sign in with that account -
                 // and then they can link accounts if they wish.
                 //
-                // Note: Automatically linking them here could expose a 
-                // potential security exploit allowing someone to pre-register 
-                // or create an account elsewhere for another users email 
+                // Note: Automatically linking them here could expose a
+                // potential security exploit allowing someone to pre-register
+                // or create an account elsewhere for another users email
                 // address then trying to sign in from it, so don't do that.
                 if (user) return next(null, false)
-                
+
                 // If an account does not exist, create one for them and return
                 // a user object to passport, which will sign them in.
                 return functions.insert({
@@ -268,7 +271,7 @@ module.exports = ({
     }))
   })
 
-  additionalStrategies.forEach(strategy => passport.user(strategy))
+  additionalStrategies.forEach(strategy => { console.log("Using additional strategy!!!!!!!!!!!!!!!"); passport.use(strategy)})
 
   // Initialise Passport
   expressApp.use(passport.initialize())
@@ -281,7 +284,7 @@ module.exports = ({
   }) => {
     // Route to start sign in
     expressApp.get(`${pathPrefix}/oauth/${providerName.toLowerCase()}`, passport.authenticate(providerName.toLowerCase(), providerOptions))
-    
+
     // Route to call back to after signing in
     expressApp.get(`${pathPrefix}/oauth/${providerName.toLowerCase()}/callback`,
       passport.authenticate(providerName.toLowerCase(), {
@@ -289,7 +292,7 @@ module.exports = ({
         failureRedirect: `${pathPrefix}/error?action=signin&type=oauth&service=${providerName}`
       })
     )
-  
+
     // Route to post to unlink accounts
     expressApp.post(`${pathPrefix}/oauth/${providerName.toLowerCase()}/unlink`, (req, res, next) => {
       if (!req.user) {
@@ -298,7 +301,7 @@ module.exports = ({
 
       // First get the User ID from the User, then look up the user details.
       // Note: We don't use the User object in req.user directly as it is a
-      // a simplified set of properties set by functions.deserialize().    
+      // a simplified set of properties set by functions.deserialize().
       functions.serialize(req.user)
       .then(id => {
         if (!id) throw new Error("Unable to serialize user")
