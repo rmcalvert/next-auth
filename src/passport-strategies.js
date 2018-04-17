@@ -271,7 +271,7 @@ module.exports = ({
     }))
   })
 
-  additionalStrategies.forEach(strategy => { console.log("Using additional strategy!!!!!!!!!!!!!!!"); passport.use(strategy)})
+  additionalStrategies.forEach(strategy => passport.use(strategy))
 
   // Initialise Passport
   expressApp.use(passport.initialize())
