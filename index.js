@@ -100,7 +100,9 @@ module.exports = (nextApp, {
       password = null
     } = {}) => { Promise.resolve(user) }
     */
-  }
+  },
+  // Additional passport strategies for authenticating, such as local or Bearer
+  additionalStrategies = [],
 } = {}) => {
   
   if (typeof(functions) !== 'object') {
@@ -159,7 +161,8 @@ module.exports = (nextApp, {
     expressApp: expressApp,
     serverUrl: serverUrl,
     providers: providers,
-    functions: functions
+    functions: functions,
+    additionalStrategies: additionalStrategies,
   })
 
   /*

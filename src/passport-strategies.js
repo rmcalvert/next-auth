@@ -21,7 +21,8 @@ module.exports = ({
     insert: (user, profile) => {},
     serialize: (user) => {},
     deserialize: (id) => {}
-  }
+  },
+  additionalStrategies = [],
 } = {}) => {
   if (expressApp === null) {
     throw new Error('expressApp must be an instance of an express server')
@@ -266,6 +267,8 @@ module.exports = ({
 
     }))
   })
+
+  additionalStrategies.forEach(strategy => passport.user(strategy))
 
   // Initialise Passport
   expressApp.use(passport.initialize())
